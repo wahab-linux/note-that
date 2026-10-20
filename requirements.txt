@@ -1,0 +1,9 @@
+# Runtime dependencies shared by the web server and native desktop edition.
+fastapi==0.150.0
+uvicorn==0.54.0
+PyMuPDF==1.26.7
+pillow==13.0.0
+python-multipart==0.0.32
+defusedxml==0.7.1
+customtkinter==5.2.2
+pygame==2.6.1

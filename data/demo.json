@@ -1,0 +1,181 @@
+{
+  "id": "attention-demo",
+  "title": "The psychology of attention",
+  "filename": "A little introduction to your mind",
+  "kind": "demo",
+  "created": 0,
+  "decisions": {},
+  "revisited": [],
+  "sections": [
+    {
+      "id": "s1",
+      "title": "The foundations",
+      "start": 0,
+      "end": 4
+    },
+    {
+      "id": "s2",
+      "title": "How memory works",
+      "start": 5,
+      "end": 9
+    },
+    {
+      "id": "s3",
+      "title": "Learning that lasts",
+      "start": 10,
+      "end": 13
+    },
+    {
+      "id": "s4",
+      "title": "Putting it into practice",
+      "start": 14,
+      "end": 17
+    }
+  ],
+  "slides": [
+    {
+      "title": "Attention is a spotlight.",
+      "body": "You decide where it lands.",
+      "kicker": "A little focus changes everything.",
+      "art": "spotlight",
+      "id": "demo-0",
+      "page": 1
+    },
+    {
+      "title": "Your mind has a filter.",
+      "body": "Selective attention lets you focus on one thing while the rest of the world carries on. Like hearing your name in a crowded room.",
+      "kicker": "THE COCKTAIL PARTY EFFECT",
+      "art": "focus",
+      "id": "demo-1",
+      "page": 2
+    },
+    {
+      "title": "One thing at a time.",
+      "body": "What feels like multitasking is usually task switching. Each switch has a cost: a little time, a little accuracy, a little energy.",
+      "kicker": "ATTENTION IS A LIMITED RESOURCE",
+      "art": "spotlight",
+      "id": "demo-2",
+      "page": 3
+    },
+    {
+      "title": "Notice what you notice.",
+      "body": "Bottom-up attention follows what is loud or new. Top-down attention follows your intentions. A good study space helps the second one win.",
+      "kicker": "TWO WAYS TO PAY ATTENTION",
+      "art": "focus",
+      "id": "demo-3",
+      "page": 4
+    },
+    {
+      "title": "Give your mind a moment.",
+      "body": "Sustained attention gets harder over time. Short breaks can help you return to the work with a fresh pair of eyes.",
+      "kicker": "REST IS PART OF THE PROCESS",
+      "art": "memory",
+      "id": "demo-4",
+      "page": 5
+    },
+    {
+      "title": "Memory is a process.",
+      "body": "Encoding brings information in. Storage keeps it available. Retrieval brings it back when you need it.",
+      "kicker": "ENCODE · STORE · RETRIEVE",
+      "art": "memory",
+      "id": "demo-5",
+      "page": 6
+    },
+    {
+      "title": "Make room for the new.",
+      "body": "Working memory holds a small amount of information for a short time. Group related ideas into chunks to make them easier to handle.",
+      "kicker": "A LITTLE LESS AT ONCE",
+      "art": "focus",
+      "id": "demo-6",
+      "page": 7
+    },
+    {
+      "title": "Connect the dots.",
+      "body": "New ideas are easier to remember when you connect them to something you already know. Ask yourself: what does this remind me of?",
+      "kicker": "ELABORATIVE ENCODING",
+      "art": "memory",
+      "id": "demo-7",
+      "page": 8
+    },
+    {
+      "title": "Forgetting is natural.",
+      "body": "Without practice, memories become harder to retrieve. A little review over time is more useful than one very long session.",
+      "kicker": "THE FORGETTING CURVE",
+      "art": "spotlight",
+      "id": "demo-8",
+      "page": 9
+    },
+    {
+      "title": "Sleep on it.",
+      "body": "Sleep supports memory consolidation. A rested mind has a better chance of keeping what you worked so hard to learn.",
+      "kicker": "LET YOUR BRAIN DO ITS THING",
+      "art": "memory",
+      "id": "demo-9",
+      "page": 10
+    },
+    {
+      "title": "Try to remember first.",
+      "body": "Close your notes and explain the idea in your own words. Retrieving a memory helps make it easier to retrieve again.",
+      "kicker": "ACTIVE RECALL",
+      "art": "focus",
+      "id": "demo-10",
+      "page": 11
+    },
+    {
+      "title": "Space it out.",
+      "body": "Revisit a topic across several days. Leave enough time that remembering takes a little effort, then come back again.",
+      "kicker": "SPACED PRACTICE",
+      "art": "memory",
+      "id": "demo-11",
+      "page": 12
+    },
+    {
+      "title": "Mix things up.",
+      "body": "Practising different types of problems together helps you learn when to use each approach, not just how to repeat it.",
+      "kicker": "INTERLEAVING",
+      "art": "focus",
+      "id": "demo-12",
+      "page": 13
+    },
+    {
+      "title": "Familiar is not learned.",
+      "body": "Recognising a sentence is easier than explaining its meaning. Test what you can recall without the slide in front of you.",
+      "kicker": "THE ILLUSION OF KNOWING",
+      "art": "spotlight",
+      "id": "demo-13",
+      "page": 14
+    },
+    {
+      "title": "Start with a small goal.",
+      "body": "Choose one section and one clear intention. A small finish line makes it easier to begin and to notice your progress.",
+      "kicker": "MAKE IT MANAGEABLE",
+      "art": "focus",
+      "id": "demo-14",
+      "page": 15
+    },
+    {
+      "title": "Make space to focus.",
+      "body": "Put distractions out of reach. Keep the material you need close. Give your attention fewer decisions to make.",
+      "kicker": "DESIGN YOUR ENVIRONMENT",
+      "art": "spotlight",
+      "id": "demo-15",
+      "page": 16
+    },
+    {
+      "title": "Be honest with yourself.",
+      "body": "Save the slides that feel uncertain. They are useful signals about where a little more attention will make the biggest difference.",
+      "kicker": "A SECOND LOOK IS A GOOD THING",
+      "art": "memory",
+      "id": "demo-16",
+      "page": 17
+    },
+    {
+      "title": "A little, often.",
+      "body": "The best study routine is one you can return to. Keep it gentle, keep it regular, and let small sessions add up.",
+      "kicker": "YOU’RE BUILDING SOMETHING GOOD",
+      "art": "spotlight",
+      "id": "demo-17",
+      "page": 18
+    }
+  ]
+}
