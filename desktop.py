@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import base64
 import io
+import math
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -45,11 +46,16 @@ class ReaderSession(StudySession):
 
     @property
     def slide(self):
+        if self.review_ids is not None:
+            if self.review_index >= len(self.review_ids):
+                return None
+            return next(s for s in self.deck['slides'] if s['id'] == self.review_ids[self.review_index])
         return self.deck['slides'][self.index] if self.index < len(self.deck['slides']) else None
 
     @property
     def section_index(self):
-        page = min(self.index, len(self.deck['slides']) - 1)
+        page = (next(i for i, s in enumerate(self.deck['slides']) if s['id'] == self.slide['id'])
+                if self.review_ids is not None and self.slide else min(self.index, len(self.deck['slides']) - 1))
         return next(i for i, section in enumerate(self.deck['sections']) if section['start'] <= page <= section['end'])
 
     def classify(self, decision):
@@ -58,9 +64,13 @@ class ReaderSession(StudySession):
         if self.slide is None:
             return None
         identifier = self.slide['id']
-        self.history.append((self.index, identifier, self.deck['decisions'].get(identifier)))
+        self.history.append((self.index, identifier, self.deck['decisions'].get(identifier),
+                             None if self.review_ids is None else list(self.review_ids), self.review_index))
         self.history = self.history[-100:]
         self.deck['decisions'][identifier] = decision
+        if self.review_ids is not None:
+            self.review_index += 1
+            return 'review' if self.slide is None else 'swipe'
         old_section = self.section_index
         self.index += 1
         self.deck['desktop_page'] = self.index
@@ -69,7 +79,7 @@ class ReaderSession(StudySession):
     def undo(self):
         if not self.history:
             return False
-        self.index, identifier, previous = self.history.pop()
+        self.index, identifier, previous, self.review_ids, self.review_index = self.history.pop()
         if previous is None:
             self.deck['decisions'].pop(identifier, None)
         else:
@@ -78,9 +88,46 @@ class ReaderSession(StudySession):
         return True
 
     def jump(self, index):
+        self.leave_review()
         self.index = self.deck['sections'][index]['start']
         self.deck['desktop_page'] = self.index
         self.history.clear()
+
+    def review_saved(self, identifier=None):
+        self.review([s['id'] for s in self.saved])
+        if identifier in self.review_ids:
+            self.review_index = self.review_ids.index(identifier)
+
+    def leave_review(self):
+        self.review_ids = None
+        self.review_index = 0
+        self.history.clear()
+
+
+class ShakeGesture:
+    """Require three substantial reversals within a short horizontal drag."""
+    def __init__(self, x, y, now):
+        self.origin_y = y
+        self.extreme = x
+        self.started = self.last_turn = now
+        self.direction = self.reversals = 0
+
+    def update(self, x, y, now):
+        if abs(y - self.origin_y) > 60 or now - self.started > 1.25 or now - self.last_turn > .35:
+            self.__init__(x, y, now)
+            return False
+        delta = x - self.extreme
+        if self.direction == 0:
+            if abs(delta) >= 24:
+                self.direction = 1 if delta > 0 else -1
+                self.extreme, self.last_turn = x, now
+        elif delta * self.direction >= 0:
+            self.extreme = x
+        elif abs(delta) >= 24:
+            self.direction *= -1
+            self.extreme, self.last_turn = x, now
+            self.reversals += 1
+        return self.reversals >= 3
 
 
 class NoteThat:
@@ -100,6 +147,10 @@ class NoteThat:
         self._fullscreen = False
         self._page_cache = None
         self._section_signature = None
+        self._sidebar_hidden = bool(self.preferences.get('sidebar_hidden', False))
+        self._egg_phase = 'idle'
+        self._egg_angle = 0
+        self._egg_scale = 1
         self.session = ReaderSession(next((d for d in self.store.decks if d['id'] == self.store.selected), self.store.decks[0]))
         root.title('note that')
         width = min(1920, round(root.winfo_screenwidth() * .94))
@@ -149,8 +200,10 @@ class NoteThat:
         side.grid_rowconfigure(5, weight=1)
         brand = ctk.CTkFrame(side, fg_color='transparent')
         brand.grid(row=0, column=0, padx=24, pady=(30, 34), sticky='ew')
-        self.text(brand, 'note that', 26, True).pack(side='left')
-        self.text(brand, '●', 12, color=ACCENT).pack(side='right')
+        with Image.open(Path(__file__).parent / 'data' / 'native' / 'heart.png') as image:
+            self.heart_icon = ctk.CTkImage(image.copy(), size=(26, 26))
+        ctk.CTkLabel(brand, text='', image=self.heart_icon, width=28).pack(side='left', padx=(0, 9))
+        self.text(brand, 'note that', 24, True).pack(side='left')
         self.import_button = self.button(side, '+   Open file', self.choose_file, fg_color=INK, text_color=SURFACE, hover_color=('#363C36', '#D6DBCF'), height=44)
         self.import_button.grid(row=1, column=0, padx=20, sticky='ew')
         self.document_picker = ctk.CTkOptionMenu(side, values=[''], command=self.select_document,
@@ -158,7 +211,8 @@ class NoteThat:
             dropdown_fg_color=SURFACE, dropdown_hover_color=SOFT, dropdown_text_color=INK,
             font=ctk.CTkFont(family=FONT_FAMILY, size=12), height=34, corner_radius=7, dynamic_resizing=False)
         self.document_picker.grid(row=2, column=0, padx=20, pady=(14, 28), sticky='ew')
-        self.text(side, 'SECTIONS', 10, True, MUTED).grid(row=3, column=0, padx=25, sticky='w')
+        self.path_heading = self.text(side, 'SECTIONS', 10, True, MUTED)
+        self.path_heading.grid(row=3, column=0, padx=25, sticky='w')
         self.document_meta = self.text(side, size=11, color=MUTED, anchor='w')
         self.document_meta.grid(row=4, column=0, padx=25, pady=(2, 13), sticky='ew')
         self.path_buttons = ctk.CTkScrollableFrame(side, fg_color='transparent', corner_radius=0,
@@ -167,6 +221,8 @@ class NoteThat:
         self.section_buttons = []
         footer = ctk.CTkFrame(side, fg_color='transparent')
         footer.grid(row=6, column=0, padx=24, pady=(16, 22), sticky='ew')
+        self.saved_button = self.button(footer, 'Saved for later (0)', self.toggle_saved, fg_color=SOFT, height=36)
+        self.saved_button.pack(fill='x', pady=(0, 16))
         self.page_label = self.text(footer, size=12, bold=True, color=ACCENT)
         self.page_label.pack(anchor='w', pady=(0, 10))
         self.progress = ctk.CTkProgressBar(footer, progress_color=ACCENT, fg_color=SOFT, height=3)
@@ -196,6 +252,10 @@ class NoteThat:
         self.canvas.bind('<ButtonPress-1>', self.drag_start)
         self.canvas.bind('<B1-Motion>', self.drag_move)
         self.canvas.bind('<ButtonRelease-1>', self.drag_end)
+        self.panel_button = self.button(self.root, '', self.toggle_sidebar, width=100, height=30,
+                                       fg_color=SURFACE, text_color=MUTED, anchor='center')
+        self.panel_button.place(in_=self.canvas, x=14, y=14)
+        self.apply_sidebar()
         self.update_sound_label()
         self.update_documents()
 
@@ -236,6 +296,25 @@ class NoteThat:
     def toggle_fullscreen(self):
         self._fullscreen = not self._fullscreen
         self.root.attributes('-fullscreen', self._fullscreen)
+
+    def apply_sidebar(self):
+        if self._sidebar_hidden:
+            self.sidebar.grid_remove()
+        else:
+            self.sidebar.grid()
+        self.panel_button.configure(text='Show panel' if self._sidebar_hidden else 'Hide panel')
+        self.panel_button.lift()
+
+    def toggle_sidebar(self):
+        if self._animating:
+            return
+        self.cancel_drag()
+        self._sidebar_hidden = not self._sidebar_hidden
+        self.preferences['sidebar_hidden'] = self._sidebar_hidden
+        self.apply_sidebar()
+        self.save()
+        self.root.update_idletasks()
+        self.draw_if_idle()
 
     def leave_fullscreen(self):
         self._fullscreen = False
@@ -307,24 +386,60 @@ class NoteThat:
         if self._closed:
             return
         deck = self.session.deck
-        self.document_meta.configure(text=f'{len(deck["slides"])} slides')
-        self.page_label.configure(text=f'{min(self.session.index + 1, len(deck["slides"])):02} / {len(deck["slides"]):02}' + ('  ·  Finished' if self.session.slide is None else ''))
-        self.progress.set(self.session.index / len(deck['slides']))
-        signature = (deck['id'], tuple((s['title'], s['start'], s['end']) for s in deck['sections']))
+        reviewing = self.session.review_ids is not None
+        saved = self.session.saved
+        self.saved_button.configure(text=f'Saved for later ({len(saved)})', fg_color=SELECTED if reviewing else SOFT,
+                                    text_color=ACCENT if reviewing else INK)
+        self.path_heading.configure(text='SAVED FOR LATER' if reviewing else 'SECTIONS')
+        self.document_meta.configure(text=f'{len(saved)} saved slides' if reviewing else f'{len(deck["slides"])} slides')
+        if reviewing:
+            count = len(self.session.review_ids)
+            self.page_label.configure(text=f'Saved {min(self.session.review_index + 1, count):02} / {count:02}')
+            self.progress.set(self.session.review_index / max(1, count))
+        else:
+            self.page_label.configure(text=f'{min(self.session.index + 1, len(deck["slides"])):02} / {len(deck["slides"]):02}' + ('  ·  Finished' if self.session.slide is None else ''))
+            self.progress.set(self.session.index / len(deck['slides']))
+        signature = (deck['id'], reviewing, tuple(s['id'] for s in saved) if reviewing else
+                     tuple((s['title'], s['start'], s['end']) for s in deck['sections']))
         if signature != self._section_signature:
             self._section_signature = signature
             for child in self.path_buttons.winfo_children():
                 child.destroy()
             self.section_buttons = []
-            for index, section in enumerate(deck['sections']):
-                label = f'{index + 1:02}   {section["title"][:22]}\n       {section["start"] + 1} - {section["end"] + 1}'
-                button = self.button(self.path_buttons, label, lambda i=index: self.visit_section(i), height=58)
+            self._path_keys = []
+            for index, entry in enumerate(saved if reviewing else deck['sections']):
+                if reviewing:
+                    key = entry['id']
+                    label = f'Slide {entry.get("page", index + 1)}\n{entry["title"][:25]}'
+                    command = lambda identifier=key: self.visit_saved(identifier)
+                else:
+                    key = index
+                    label = f'{index + 1:02}   {entry["title"][:22]}\n       {entry["start"] + 1} - {entry["end"] + 1}'
+                    command = lambda i=index: self.visit_section(i)
+                self._path_keys.append(key)
+                button = self.button(self.path_buttons, label, command, height=58)
                 button.pack(fill='x', pady=3)
                 self.section_buttons.append(button)
         for index, button in enumerate(self.section_buttons):
-            active = self.session.slide is not None and index == self.session.section_index
+            active = self.session.slide is not None and self._path_keys[index] == (self.session.slide['id'] if reviewing else self.session.section_index)
             button.configure(fg_color=SELECTED if active else 'transparent', text_color=ACCENT if active else MUTED)
         self.draw_slide()
+
+    def toggle_saved(self):
+        if self._animating:
+            return
+        self.cancel_drag()
+        if self.session.review_ids is None:
+            self.session.review_saved()
+        else:
+            self.session.leave_review()
+        self.refresh()
+
+    def visit_saved(self, identifier):
+        if not self._animating:
+            self.cancel_drag()
+            self.session.review_saved(identifier)
+            self.refresh()
 
     def visit_section(self, index):
         if self._animating:
@@ -377,7 +492,12 @@ class NoteThat:
             title, body = slide['title'], slide.get('body', '')
             kicker = slide.get('kicker', self.session.section['title']).upper()
         else:
-            title, body, kicker = 'A little more familiar.', 'All slides explored. Pick any section to take another look.', 'SESSION COMPLETE'
+            if self.session.review_ids is not None:
+                title = 'Saved slides, reviewed.' if self.session.review_ids else 'Nothing saved. Yet.'
+                body = 'Click Saved for later to return to your slides.' if self.session.review_ids else 'Swipe a slide right to keep it here. Click Saved for later to return.'
+                kicker = 'SAVED FOR LATER'
+            else:
+                title, body, kicker = 'A little more familiar.', 'All slides explored. Pick any section to take another look.', 'SESSION COMPLETE'
         title_size = min(64, max(24, round(card_width * .042)))
         body_size = min(28, max(14, round(card_width * .019)))
         while True:
@@ -431,6 +551,7 @@ class NoteThat:
             self._drag_start = (event.x, event.y)
             self._drag_offset = 0
             self._drag_sample = (event.x, time.perf_counter())
+            self._shake = ShakeGesture(event.x, event.y, self._drag_sample[1])
             self._velocity = 0
             self.canvas.configure(cursor='fleur')
 
@@ -442,8 +563,67 @@ class NoteThat:
         self._velocity = (event.x - last_x) / max(.001, now - last_time)
         self._drag_sample = (event.x, now)
         self._drag_offset = (event.x - self._drag_start[0]) * 1.65
+        if self._shake.update(event.x, event.y, now):
+            self.shake_slide()
+            return
         if not self.preferences['reduced_motion']:
             self.paint(self._drag_offset)
+
+    def shake_slide(self):
+        if self._animating or self.session.slide is None:
+            return
+        self.cancel_drag()
+        if self.preferences['reduced_motion']:
+            return
+        if self._base is None:
+            self.draw_slide()
+        self._animating = True
+        self._egg_source = self._base
+
+        def finish():
+            self._animating = False
+            self._egg_phase, self._egg_angle, self._egg_scale = 'idle', 0, 1
+            self._egg_source = None
+            self.draw_slide()
+
+        def hold():
+            self._egg_phase = 'holding'
+            self.later(1000, lambda: phase('returning', .44, (180, 1), (360, 1), finish))
+
+        def phase(name, duration, start_pose, end_pose, finished):
+            self._egg_phase = name
+            started = time.perf_counter()
+            def frame():
+                elapsed = min(1, (time.perf_counter() - started) / duration)
+                eased = elapsed * elapsed * (3 - 2 * elapsed)
+                angle = start_pose[0] + (end_pose[0] - start_pose[0]) * eased
+                scale = start_pose[1] + (end_pose[1] - start_pose[1]) * eased
+                self.render_pose(angle, scale)
+                if elapsed < 1:
+                    self.later(16, frame)
+                else:
+                    finished()
+            frame()
+
+        phase('shrinking', .18, (0, 1), (0, .42), lambda:
+              phase('turning', .32, (0, .42), (180, .42), lambda:
+                    phase('growing', .18, (180, .42), (180, 1), hold)))
+
+    def render_pose(self, angle, scale):
+        source = self._egg_source
+        radians = math.radians(angle)
+        bound_width = abs(source.width * math.cos(radians)) + abs(source.height * math.sin(radians))
+        bound_height = abs(source.width * math.sin(radians)) + abs(source.height * math.cos(radians))
+        # Keep corners visible when turning a wide slide or resizing the window.
+        fitted = min(scale, (self.canvas.winfo_width() - 24) / max(1, bound_width),
+                     (self.canvas.winfo_height() - 24) / max(1, bound_height))
+        size = (max(1, round(source.width * fitted)), max(1, round(source.height * fitted)))
+        image = source.resize(size, Image.Resampling.BILINEAR).convert('RGBA')
+        image = image.rotate(-angle, resample=Image.Resampling.BICUBIC, expand=True)
+        self._photo = ImageTk.PhotoImage(image, master=self.root)
+        self.canvas.itemconfigure(self.image_item, image=self._photo)
+        self._egg_angle, self._egg_scale = angle, scale
+        self.paint()
 
     @property
     def swipe_threshold(self):
