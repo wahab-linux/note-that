@@ -15,9 +15,11 @@ python desktop.py
 
 On Windows, `py` can be used in place of `python`. Python's Windows installer includes Tk by default. On Linux, install your distribution's Tk package (often `python3-tk`) and run in a desktop session. On macOS, use a Python installation with working Tk support.
 
-Import a PDF, PPTX, or slide image using **Add files**. Drag the card right to save a slide, left when confident, or use the arrow keys. **Z** or **Undo** reverses the last swipe. The study path locks later sections until the current one is explored; edit section names and starting pages with **Edit sections**. The library and progress screens let you resume documents and review saved slides.
+The desktop edition is a large slide canvas with one left sidebar. Use **Open file** to import a PDF, PPTX, or slide image. A small document dropdown switches between previously opened files; every section is available directly in the sidebar. Slides fit the available space without cropping or stretching, including at 1920×1080. **F11** enters full screen; **Esc** exits.
 
-**Sound off/on** opens sound settings: enable soft swipe tones and completion chimes, adjust volume, or select reduced motion. Sounds are generated locally and played with pygame. An unavailable audio device is reported without interrupting study. Confetti celebrates sections and the entire document; reduced motion keeps the congratulations and skips moving confetti.
+Drag a slide left when confident or right to save it. Short horizontal drags (28–44 pixels, depending on window size) and quick flicks advance immediately; clicks and vertical drags do not. Sections flow automatically with no confirmation screens or review buttons. Arrow keys also swipe; **Z** undoes the last swipe, including across a section boundary. The last slide leaves a quiet completion screen; choose any section to read it again.
+
+**Dark mode** and the **🔊 / 🔇** sound toggle live at the bottom of the sidebar and remember your choice. Sound is muted by default; enabling it plays a short preview. Soft swipe tones and section chimes are generated locally with pygame. Unavailable audio output is reported without interrupting reading. Saved reduced-motion preferences from earlier versions remain respected. The desktop has no banners, confetti, or separate library/progress screens.
 
 Native documents, progress, theme, and sound settings are saved locally in `NoteThat/library.json` under `%LOCALAPPDATA%` on Windows or `~/.local/share` elsewhere. Set `NOTE_THAT_DATA_DIR` to choose another storage directory. Saves use an atomic file replacement; an unreadable existing library is preserved rather than overwritten. There are no accounts or uploads in the native app.
 
